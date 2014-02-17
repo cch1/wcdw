@@ -1,11 +1,11 @@
-(ns roomkey.authorization
+(ns wcdw.authorization
   "A simple Role-Based Access Control System"
   (:require [clojure.tools.logging :as log]
             [clojure.set :as set]
             [datomic.api :as d]
-            [roomkey.authorization.database :as rkdb]
-            [roomkey.authorization.role :as role]
-            [roomkey.authorization.permission :as permission]
+            [wcdw.authorization.database :as rkdb]
+            [wcdw.authorization.role :as role]
+            [wcdw.authorization.permission :as permission]
             [ring.util.response :as response]))
 
 (def ^:dynamic *role*)

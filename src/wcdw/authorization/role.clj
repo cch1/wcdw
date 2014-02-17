@@ -1,4 +1,4 @@
-(ns roomkey.authorization.role
+(ns wcdw.authorization.role
   "Authorization Role model"
   (:refer-clojure :exclude [ancestors descendants parents])
   (:require [clojure.tools.logging :as log]

@@ -8,7 +8,8 @@
   :dependencies [[org.clojure/clojure "1.5.1"]
                  [com.datomic/datomic-free "0.9.4556" :exclusions [org.slf4j/slf4j-nop
                                                                    org.slf4j/log4j-over-slf4j]]
-                 [org.clojure/tools.logging "0.2.6"]]
+                 [org.clojure/tools.logging "0.2.6"]
+                 [ring/ring-core "1.2.1"]]
   :jvm-opts ["-server" "-Dlog4j.debug=false" "-Xms256M" "-Xmx1g"
              "-Djava.io.tmpdir=./tmp"] ;; This ensures resources/log4j.properties works as designed.
   :profiles {:dev {:resource-paths ["dev-resources"]

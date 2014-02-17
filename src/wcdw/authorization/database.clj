@@ -1,4 +1,4 @@
-(ns roomkey.authorization.database
+(ns wcdw.authorization.database
   "Functions to bootstrap a database"
   (:require [clojure.tools.logging :as log]
             [datomic.api :as d]))
