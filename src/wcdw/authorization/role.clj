@@ -137,6 +137,15 @@
     (d/transact conn [{:db/id parent-id
                        :authorization.role/child child-id}])))
 
+(defn assign2
+  "Assign the child role to the parent role"
+  [conn parent child]
+  (let [db (d/db conn)]
+    (assert (d/entity db [:authorization.role/id parent]) "Parent could not be found")
+    (assert (d/entity db [:authorization.role/id child]) "Child could not be found"))
+  (d/transact conn [{:db/id [:authorization.role/id parent]
+                     :authorization.role/child {:db/id [:authorization.role/id child]}}]))
+
 (defn unassign
   "Unassign the child role from the parent role"
   [conn parent child]

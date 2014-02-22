@@ -20,13 +20,15 @@
                :db/cardinality :db.cardinality/one
                :db.install/_attribute :db.part/db}
               {:db/id          #db/id[:db.part/db]
-               :db/ident       :authorization.mode/id
+               :db/ident       :authorization.resource/name
                :db/valueType   :db.type/keyword
+               :db/unique      :db.unique/value
                :db/cardinality :db.cardinality/one
                :db.install/_attribute :db.part/db}
               {:db/id          #db/id[:db.part/db]
-               :db/ident       :authorization.resource/id
+               :db/ident       :authorization.mode/name
                :db/valueType   :db.type/keyword
+               :db/unique      :db.unique/value
                :db/cardinality :db.cardinality/one
                :db.install/_attribute :db.part/db}
               ;; Partition
@@ -39,9 +41,11 @@
     [conn]
     (d/transact conn schema)))
 
-(defn init-perm [conn r]
-  (let [add [[:db/add #db/id [:db.part/permissions] :db/ident r]]]
-    (d/transact conn add)))
+(defn create-resource [conn r]
+  (d/transact conn [{:db/id #db/id[:db.part/permissions -1] :authorization.resource/name r}]))
+
+(defn create-mode [conn m]
+  (d/transact conn [{:db/id #db/id[:db.part/permissions -1] :authorization.mode/name m}]))
 
 (defn permissions
   "Return a seq of all defined permissions"
@@ -54,14 +58,24 @@
 (defn grant
   "Grant to the given role permission to access the given resource in the given mode"
   [conn role mode resource]
-  (d/transact conn [{:db/id #db/id[:db.part/roles -1]
-                       :authorization.permission/role role
-                       :authorization.permission/mode mode
-                       :authorization.permission/resource resource}]))
+  (d/transact conn [{:db/id #db/id[:db.part/permissions -1]
+                     :authorization.permission/role {:db/id [:authorization.role/id role]}
+                     :authorization.permission/mode {:db/id [:authorization.mode/name mode]}
+                     :authorization.permission/resource {:db/id [:authorization.resource/name resource]}}]))
+
 (defn revoke
   "Revoke from the given role permission to access the given resource in the given mode"
   [conn role mode resource]
   )
+
+(defn list-perms
+  "List permissions a role has for a given resource"
+  [db role resource]
+  (d/q '[:find ?p :in $ ?role ?resource :where
+         [?r :authorization.role/id ?role]
+         [?p :authorization.permission/role ?r]
+         [?re :authorization.resource/name ?resource]
+         [?p :authorization.permission/resource ?re]] db role resource))
 
 (defn unrooted?
   "Does the graph contain roles not descendants of the root?"
@@ -72,8 +86,4 @@
   (d/q '[:find ?e
          :in $
          :where [?e :authorization.permission/mode ?v]]
-       db
-       ))
-
-
-
+       db))
