@@ -22,11 +22,11 @@
                :db/ident :db.part/roles
                :db.install/_partition :db.part/db}]]
   (defn initialize!
-    "Install schema and load seed data"
-    [conn]
-    (d/transact conn schema)
-    (d/transact conn [{:db/id #db/id[:db.part/roles]
-                       :authorization.role/id root}])))
+  "Install schema and load seed data"
+  [conn]
+  (d/transact conn schema)
+  (d/transact conn [{:db/id #db/id[:db.part/roles]
+                     :authorization.role/id root}])))
 
 (defn roles
   "Return a seq of all defined roles"
@@ -34,24 +34,24 @@
   (map first (d/q '[:find ?v :where [_ :authorization.role/id ?v]] db)))
 
 (def rules
-  '[[[child ?parent ?child]
+  '[[(child ?parent ?child)
      [?parent :authorization.role/child ?child]]
-    [[descendant ?ancestor ?descendant]
+    [(descendant ?ancestor ?descendant)
      (child ?ancestor ?descendant)]
-    [[descendant ?ancestor ?descendant]
+    [(descendant ?ancestor ?descendant)
      (child ?ancestor ?x)
-     (child ?x ?descendant)]
-    [[cyclic? ?candidate]
+     (descendant ?x ?descendant)]
+    [(cyclic? ?candidate)
      (descendant ?candidate ?candidate)]
     ;; Descendant or self
-    [[descendant+ ?ancestor ?descendant]
+    [(descendant+ ?ancestor ?descendant)
      [(identity ?ancestor) ?descendant]]
-    [[descendant+ ?ancestor ?descendant]
+    [(descendant+ ?ancestor ?descendant)
      (descendant ?ancestor ?descendant)]
     ;; Ancestor or self
-    [[ancestor+ ?ancestor ?descendant]
+    [(ancestor+ ?ancestor ?descendant)
      [(identity ?descendant) ?ancestor]]
-    [[ancestor+ ?ancestor ?descendant]
+    [(ancestor+ ?ancestor ?descendant)
      (descendant ?ancestor ?descendant)]])
 
 (defn cyclic?
@@ -100,10 +100,11 @@
 (defn ancestors
   "Return a list of all ancestor roles of the given descendant"
   [db descendant-identity]
-  (map (comp :authorization.role/id (partial d/entity db) first)
-       (d/q '[:find ?ancestor :in $ % ?descendant-identity :where
+  (map first
+       (d/q '[:find ?ancestor-id :in $ % ?descendant-identity :where
               [?descendant :authorization.role/id ?descendant-identity]
-              (ancestor+ ?ancestor ?descendant)]
+              (ancestor+ ?ancestor ?descendant)
+              [?ancestor :authorization.role/id ?ancestor-id]]
             db rules descendant-identity)))
 
 (defn role-graph
