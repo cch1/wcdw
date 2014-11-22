@@ -37,16 +37,7 @@
     :authorization.role/_child #db/id[:db.part/roles -3]
     :db/doc "Child of u00 and u0"}
    ;; Wire up second parent of :u00x -not possible with map representation above due to duplicate keys
-   [:db/add #db/id[:db.part/roles -1] :authorization.role/child #db/id[:db.part/roles -5]]
-   ])
-
-;; root
-;;   u0
-;;     u00
-;;       u000
-;;       u00x
-;;     u00x
-;;   u1
+   [:db/add #db/id[:db.part/roles -1] :authorization.role/child #db/id[:db.part/roles -5]]])
 
 (namespace-state-changes [(around :facts (do (d/delete-database uri)
                                              (d/create-database uri)
@@ -89,6 +80,24 @@
   (let [db (-> uri d/connect d/db)]
     (ancestors db :u00) => (just #{:root :u0 :u00})
     (ancestors db :u000) => (just #{:root :u0 :u00 :u000})))
+
+(future-fact "Unrooted roles are detected"
+  (let [db (-> uri d/connect d/db)]
+    (unrooted? db) => falsey))
+
+(fact "cycles are detected"
+  (let [db (-> uri d/connect d/db)]
+    (cyclic? db) => falsey)
+  (let [ida (d/tempid :db.part/roles)
+        idb (d/tempid :db.part/roles)
+        trx [{:db/id ida
+              :authorization.role/id :ua
+              :authorization.role/_child idb}
+             {:db/id idb
+              :authorization.role/id :ua
+              :authorization.role/_child ida}]
+        db (-> (d/connect uri) d/db (d/with trx) :db-after)]
+    (cyclic? db) => truthy))
 
 (fact "Can create a role"
   (let [conn (-> uri d/connect)]
