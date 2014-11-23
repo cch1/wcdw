@@ -22,11 +22,11 @@
                :db/ident :db.part/roles
                :db.install/_partition :db.part/db}]]
   (defn initialize!
-  "Install schema and load seed data"
-  [conn]
-  (d/transact conn schema)
-  (d/transact conn [{:db/id #db/id[:db.part/roles]
-                     :authorization.role/id root}])))
+    "Install schema and load seed data"
+    [conn]
+    (d/transact conn schema)
+    (d/transact conn [{:db/id #db/id[:db.part/roles]
+                       :authorization.role/id root}])))
 
 (defn roles
   "Return a seq of all defined roles"
@@ -41,7 +41,7 @@
     [(descendant ?ancestor ?descendant)
      (child ?ancestor ?x)
      (descendant ?x ?descendant)]
-    [(cyclic? ?candidate)
+    [(cyclic ?candidate)
      (descendant ?candidate ?candidate)]
     ;; Descendant or self
     [(descendant+ ?ancestor ?descendant)
@@ -57,16 +57,22 @@
 (defn cyclic?
   "Does the role graph contain any cycles?"
   [db]
-  (seq (map first (d/q '[:find ?id :in $ % :where
-                         ;; Why is this next clause needed?
-                         [?candidate :authorization.role/id ?id]
-                         (cyclic? ?candidate)]
-                       db rules))))
+  (seq (d/q '{:find [[?id ...]]
+              :in [$ %]
+              :where [[?candidate :authorization.role/id ?id]
+                      (cyclic ?candidate)]}
+            db rules)))
 
 (defn unrooted?
   "Does the graph contain roles not descendants of the root?"
   [db]
-  (d/q '[:find ?unrooted :in $ % :where ]))
+  (let [unrooted (d/q '{:find [[?id ...]]
+                        :in [$ %]
+                        :where [[?e :authorization.role/id ?id]
+                                [(datomic.api/entity $ ?e) ?e*]
+                                [(-> ?e* :authorization.role/_child empty?)]]}
+                      db rules)]
+    (seq (disj (set unrooted) root))))
 
 (defn children
   "Return a list of all child roles of the given parent"

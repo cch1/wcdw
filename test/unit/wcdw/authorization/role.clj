@@ -81,9 +81,14 @@
     (ancestors db :u00) => (just #{:root :u0 :u00})
     (ancestors db :u000) => (just #{:root :u0 :u00 :u000})))
 
-(future-fact "Unrooted roles are detected"
+(fact "Unrooted roles are detected"
   (let [db (-> uri d/connect d/db)]
-    (unrooted? db) => falsey))
+    (unrooted? db) => falsey)
+  (let [id (d/tempid :db.part/roles)
+        trx [{:db/id id
+              :authorization.role/id :u}]
+        db (-> (d/connect uri) d/db (d/with trx) :db-after)]
+    (unrooted? db) => truthy))
 
 (fact "cycles are detected"
   (let [db (-> uri d/connect d/db)]
