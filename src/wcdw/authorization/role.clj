@@ -77,41 +77,42 @@
 (defn children
   "Return a list of all child roles of the given parent"
   [db parent-identity]
-  (map first
-       (d/q '[:find ?child-identity :in $ % ?parent-identity :where
-              [?parent :authorization.role/id ?parent-identity]
-              (child ?parent ?child)
-              [?child :authorization.role/id ?child-identity]]
-            db rules parent-identity)))
+  (d/q '{:find [[?child-identity ...]]
+         :in [$ % ?parent-identity]
+         :where [[?parent :authorization.role/id ?parent-identity]
+                 (child ?parent ?child)
+                 [?child :authorization.role/id ?child-identity]]}
+       db rules parent-identity))
 
 (defn descendants
   "Return a list of all descendant roles of the given ancestor"
   [db ancestor-identity]
-  (map first
-       (d/q '[:find ?descendant-identity :in $ % ?ancestor-identity :where
-              [?ancestor :authorization.role/id ?ancestor-identity]
-              (descendant+ ?ancestor ?descendant)
-              [?descendant :authorization.role/id ?descendant-identity]]
-            db rules ancestor-identity)))
+  (d/q '{:find [[?descendant-identity ...]]
+         :in [$ % ?ancestor-identity]
+         :where [[?ancestor :authorization.role/id ?ancestor-identity]
+                 (descendant+ ?ancestor ?descendant)
+                 [?descendant :authorization.role/id ?descendant-identity]]}
+       db rules ancestor-identity))
 
 (defn parents
   "Return a list of all parent roles of the given child"
   [db child-identity]
-  (map (comp :authorization.role/id (partial d/entity db) first)
-       (d/q '[:find ?parent :in $ % ?child-identity :where
-              [?child :authorization.role/id ?child-identity]
-              (child ?parent ?child)]
-            db rules child-identity)))
+  (d/q '{:find [[?parent-identity ...]]
+         :in [$ % ?child-identity]
+         :where [[?child :authorization.role/id ?child-identity]
+                 (child ?parent ?child)
+                 [?parent :authorization.role/id ?parent-identity]]}
+       db rules child-identity))
 
 (defn ancestors
   "Return a list of all ancestor roles of the given descendant"
   [db descendant-identity]
-  (map first
-       (d/q '[:find ?ancestor-id :in $ % ?descendant-identity :where
-              [?descendant :authorization.role/id ?descendant-identity]
-              (ancestor+ ?ancestor ?descendant)
-              [?ancestor :authorization.role/id ?ancestor-id]]
-            db rules descendant-identity)))
+  (d/q '{:find [[?ancestor-id ...]]
+         :in [$ % ?descendant-identity]
+         :where [[?descendant :authorization.role/id ?descendant-identity]
+                 (ancestor+ ?ancestor ?descendant)
+                 [?ancestor :authorization.role/id ?ancestor-id]]}
+       db rules descendant-identity))
 
 (defn role-graph
   [db & [start]]
