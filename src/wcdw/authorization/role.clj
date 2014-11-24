@@ -31,7 +31,8 @@
 (defn roles
   "Return a seq of all defined roles"
   [db]
-  (map first (d/q '[:find ?v :where [_ :authorization.role/id ?v]] db)))
+  (d/q '{:find [[?v ...]]
+         :where [[_ :authorization.role/id ?v]]} db))
 
 (def rules
   '[[(child ?parent ?child)
