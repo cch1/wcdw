@@ -13,7 +13,7 @@
                :db/unique      :db.unique/identity
                :db.install/_attribute :db.part/db}
               {:db/id          #db/id[:db.part/db]
-               :db/ident       :authorization.role/child
+               :db/ident       :authorization.role/children
                :db/valueType   :db.type/ref
                :db/cardinality :db.cardinality/many
                :db.install/_attribute :db.part/db}
@@ -36,7 +36,7 @@
 
 (def rules
   '[[(child ?parent ?child)
-     [?parent :authorization.role/child ?child]]
+     [?parent :authorization.role/children ?child]]
     [(descendant ?ancestor ?descendant)
      (child ?ancestor ?descendant)]
     [(descendant ?ancestor ?descendant)
@@ -71,7 +71,7 @@
                         :in [$ %]
                         :where [[?e :authorization.role/id ?id]
                                 [(datomic.api/entity $ ?e) ?e*]
-                                [(-> ?e* :authorization.role/_child empty?)]]}
+                                [(-> ?e* :authorization.role/_children empty?)]]}
                       db rules)]
     (seq (disj (set unrooted) root))))
 
@@ -128,19 +128,19 @@
   (let [db (d/db conn)]
     (d/transact conn [{:db/id #db/id[:db.part/roles -1]
                        :authorization.role/id ident
-                       :authorization.role/_child [:authorization.role/id parent-ident]}])))
+                       :authorization.role/_children [:authorization.role/id parent-ident]}])))
 
 (defn assign
   "Assign the child role to the parent role"
   [conn parent child]
   (d/transact conn [[:db/add [:authorization.role/id parent]
-                     :authorization.role/child [:authorization.role/id child]]]))
+                     :authorization.role/children [:authorization.role/id child]]]))
 
 (defn unassign
   "Unassign the child role from the parent role"
   [conn parent child]
   (d/transact conn [[:db/retract [:authorization.role/id parent]
-                     :authorization.role/child [:authorization.role/id child]]]))
+                     :authorization.role/children [:authorization.role/id child]]]))
 
 (defn delete
   "Deletes the given (childless) role from the database"

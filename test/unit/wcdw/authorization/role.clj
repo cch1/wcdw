@@ -25,24 +25,24 @@
 (def fixtures
   [{:db/id #db/id[:db.part/roles -1]
     :authorization.role/id :u0
-    :authorization.role/_child [:authorization.role/id :root]}
+    :authorization.role/_children [:authorization.role/id :root]}
    {:db/id #db/id[:db.part/roles -2]
     :authorization.role/id :u1
-    :authorization.role/_child [:authorization.role/id :root]}
+    :authorization.role/_children [:authorization.role/id :root]}
    {:db/id #db/id[:db.part/roles -3]
     :authorization.role/id :u00
-    :authorization.role/_child #db/id[:db.part/roles -1]
+    :authorization.role/_children #db/id[:db.part/roles -1]
     :db/doc "Child of u0"}
    {:db/id #db/id[:db.part/roles -4]
     :authorization.role/id :u000
-    :authorization.role/_child #db/id[:db.part/roles -3]
+    :authorization.role/_children #db/id[:db.part/roles -3]
     :db/doc "Grandchild of u0, child of u00"}
    {:db/id #db/id[:db.part/roles -5]
     :authorization.role/id :u00x
-    :authorization.role/_child #db/id[:db.part/roles -3]
+    :authorization.role/_children #db/id[:db.part/roles -3]
     :db/doc "Child of u00 and u0"}
    ;; Wire up second parent of :u00x -not possible with map representation above due to duplicate keys
-   [:db/add #db/id[:db.part/roles -1] :authorization.role/child #db/id[:db.part/roles -5]]])
+   [:db/add #db/id[:db.part/roles -1] :authorization.role/children #db/id[:db.part/roles -5]]])
 
 (namespace-state-changes [(around :facts (do (d/delete-database uri)
                                              (d/create-database uri)
@@ -102,10 +102,10 @@
         idb (d/tempid :db.part/roles)
         trx [{:db/id ida
               :authorization.role/id :ua
-              :authorization.role/_child idb}
+              :authorization.role/_children idb}
              {:db/id idb
               :authorization.role/id :ua
-              :authorization.role/_child ida}]
+              :authorization.role/_children ida}]
         db (-> (d/connect uri) d/db (d/with trx) :db-after)]
     (cyclic? db) => truthy))
 
