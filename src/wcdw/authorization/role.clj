@@ -136,6 +136,14 @@
   (d/transact conn [[:db/add [:authorization.role/id parent]
                      :authorization.role/children [:authorization.role/id child]]]))
 
+(defn reassign
+  "Reassign the child role from the current parent to the new parent"
+  [conn parent0 parent1 child]
+  (d/transact conn [[:db/retract [:authorization.role/id parent0]
+                     :authorization.role/children [:authorization.role/id child]]
+                    [:db/add [:authorization.role/id parent1]
+                     :authorization.role/children [:authorization.role/id child]]]))
+
 (defn unassign
   "Unassign the child role from the parent role"
   [conn parent child]
