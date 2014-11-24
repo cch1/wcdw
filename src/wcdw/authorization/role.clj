@@ -4,7 +4,7 @@
   (:require [clojure.tools.logging :as log]
             [datomic.api :as d]))
 
-(def ^:private root :root)
+(def ^:private root (atom nil))
 
 (let [schema [{:db/id          #db/id[:db.part/db]
                :db/ident       :authorization.role/id
@@ -23,10 +23,11 @@
                :db.install/_partition :db.part/db}]]
   (defn initialize!
     "Install schema and load seed data"
-    [conn]
+    [conn root-role-id]
+    (reset! root root-role-id)
     (d/transact conn schema)
     (d/transact conn [{:db/id #db/id[:db.part/roles]
-                       :authorization.role/id root}])))
+                       :authorization.role/id @root}])))
 
 (defn roles
   "Return a seq of all defined roles"
@@ -73,7 +74,7 @@
                                 [(datomic.api/entity $ ?e) ?e*]
                                 [(-> ?e* :authorization.role/_children empty?)]]}
                       db rules)]
-    (seq (disj (set unrooted) root))))
+    (seq (disj (set unrooted) @root))))
 
 (defn children
   "Return a list of all child roles of the given parent"
@@ -117,14 +118,14 @@
 
 (defn role-graph
   [db & [start]]
-  (let [start (or start root)
+  (let [start (or start @root)
         cs (children db start)]
     {start (reduce (fn [acc child] (merge acc (role-graph db child))) {} cs)}))
 
 (defn create
   "Creates the identified role as a child of the given parent"
   [conn parent-ident ident]
-  {:pre [(keyword? ident) (keyword? parent-ident) (not= root ident)]}
+  {:pre [(keyword? ident) (keyword? parent-ident) (not= @root ident)]}
   (let [db (d/db conn)]
     (d/transact conn [{:db/id #db/id[:db.part/roles -1]
                        :authorization.role/id ident
