@@ -21,15 +21,16 @@
            (try (deref actual) false (catch Throwable e (extended-= (ex-data (.getCause e)) expected)))))
 
 (def uri "datomic:mem://0")
-(def root :root)
 
 (def fixtures
-  [{:db/id #db/id[:db.part/roles -1]
+  [{:db/id #db/id[:db.part/roles -1000]
+    :authorization.role/id :root}
+   {:db/id #db/id[:db.part/roles -1]
     :authorization.role/id :u0
-    :authorization.role/_children [:authorization.role/id root]}
+    :authorization.role/_children #db/id[:db.part/roles -1000]}
    {:db/id #db/id[:db.part/roles -2]
     :authorization.role/id :u1
-    :authorization.role/_children [:authorization.role/id root]}
+    :authorization.role/_children #db/id[:db.part/roles -1000]}
    {:db/id #db/id[:db.part/roles -3]
     :authorization.role/id :u00
     :authorization.role/_children #db/id[:db.part/roles -1]
@@ -52,20 +53,20 @@
 
 (fact "Can initialize"
   (let [conn (d/connect uri)]
-    (:tx-data @(initialize! conn :supervisor))) => truthy)
+    (:tx-data @(initialize! conn))) => truthy)
 
 ;; The following tests interact with the database and expect fixture data to be installed afresh before each test
 
 (namespace-state-changes [(around :facts (do (d/create-database uri)
                                              (let [conn (d/connect uri)]
-                                               (initialize! conn root)
+                                               (initialize! conn)
                                                (d/transact conn fixtures))
                                              ?form
                                              (d/delete-database uri)))])
 
 (fact "Can retrieve all roles"
   (let [db (-> uri d/connect d/db)]
-    (roles db) => (just #{root :u0 :u1 :u00 :u000 :u00x})))
+    (roles db) => (just #{:root :u0 :u1 :u00 :u000 :u00x})))
 
 (fact "Can retrieve children of a role"
   (let [db (-> uri d/connect d/db)]
@@ -73,7 +74,7 @@
 
 (fact "Can retrieve descendants of a role"
   (let [db (-> uri d/connect d/db)]
-    (descendants db root) => (just #{root :u1 :u0 :u00 :u000 :u00x})
+    (descendants db :root) => (just #{:root :u1 :u0 :u00 :u000 :u00x})
     (descendants db :u0) => (just #{:u0 :u00 :u000 :u00x})
     (descendants db :u000) => (just #{:u000})))
 
@@ -84,17 +85,12 @@
 
 (fact "Can retrieve ancestors of a role"
   (let [db (-> uri d/connect d/db)]
-    (ancestors db :u00) => (just #{root :u0 :u00})
-    (ancestors db :u000) => (just #{root :u0 :u00 :u000})))
+    (ancestors db :u00) => (just #{:root :u0 :u00})
+    (ancestors db :u000) => (just #{:root :u0 :u00 :u000})))
 
-(fact "Unrooted roles are detected"
+(fact "Root roles are identified"
   (let [db (-> uri d/connect d/db)]
-    (unrooted? db) => falsey)
-  (let [id (d/tempid :db.part/roles)
-        trx [{:db/id id
-              :authorization.role/id :u}]
-        db (-> (d/connect uri) d/db (d/with trx) :db-after)]
-    (unrooted? db) => truthy))
+    (roots db) => (just #{:root})))
 
 (fact "cycles are detected"
   (let [db (-> uri d/connect d/db)]
@@ -112,15 +108,20 @@
 
 (fact "Can extract a role-graph"
   (let [db (-> uri d/connect d/db)]
-    (role-graph db) => {root {:u0 {:u00 {:u000 {} :u00x {}} :u00x {}} :u1 {}}})  )
+    (role-graph db) => (just #{{:root {:u0 {:u00 {:u000 {} :u00x {}} :u00x {}} :u1 {}}}}))  )
 
-(fact "Can create a role"
+(fact "Can create a root role"
   (let [conn (-> uri d/connect)]
-    (create conn root :u2) => (tx-data (n-of (partial instance? datomic.db.Datum) 3))
-    (children (d/db conn) root) => (contains #{:u2})
-    (roles (d/db conn)) => (contains #{root :u2})))
+    (create conn :administrator) => (tx-data (n-of (partial instance? datomic.db.Datum) 2))
+    (roots (d/db conn)) => (contains #{:administrator})))
 
-(fact "Can't create a role without a valid parent"
+(fact "Can create a subordinate role"
+  (let [conn (-> uri d/connect)]
+    (create conn :u2 :root) => (tx-data (n-of (partial instance? datomic.db.Datum) 3))
+    (children (d/db conn) :root) => (contains #{:u2})
+    (roles (d/db conn)) => (contains #{:root :u2})))
+
+(fact "Can't create a role with an invalid parent"
   (let [conn (-> uri d/connect)]
     (create conn :inexistant-role :new-role)) => (refers-to-tx-exception {:db/error :db.error/not-an-entity}))
 
