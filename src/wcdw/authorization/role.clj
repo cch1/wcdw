@@ -126,42 +126,26 @@
   [conn parent-ident ident]
   {:pre [(keyword? ident) (keyword? parent-ident) (not= root ident)]}
   (let [db (d/db conn)]
-    ;; TODO: Make this a transaction function
-    (assert (ffirst (d/q '[:find ?e :in $ ?ident :where [?e :authorization.role/id ?ident]] db parent-ident))
-            "Parent could not be found")
     (d/transact conn [{:db/id #db/id[:db.part/roles -1]
-                       :authorization.role/id ident}
-                      {:db/id #db/id[:db.part/roles -2]
-                       :authorization.role/id parent-ident
-                       :authorization.role/child #db/id[:db.part/roles -1]}])))
+                       :authorization.role/id ident
+                       :authorization.role/_child [:authorization.role/id parent-ident]}])))
 
 (defn assign
   "Assign the child role to the parent role"
   [conn parent child]
-  (let [db (d/db conn)
-        parent-id (ffirst (d/q '[:find ?e :in $ ?ident :where [?e :authorization.role/id ?ident]] db parent))
-        child-id (ffirst (d/q '[:find ?e :in $ ?ident :where [?e :authorization.role/id ?ident]] db child))]
-    (assert parent-id "Parent could not be found")
-    (assert child-id "Child could not be found")
-    (d/transact conn [{:db/id parent-id
-                       :authorization.role/child child-id}])))
+  (d/transact conn [[:db/add [:authorization.role/id parent]
+                     :authorization.role/child [:authorization.role/id child]]]))
 
 (defn unassign
   "Unassign the child role from the parent role"
   [conn parent child]
-  (let [db (d/db conn)
-        parent-id (ffirst (d/q '[:find ?e :in $ ?ident :where [?e :authorization.role/id ?ident]] db parent))
-        child-id (ffirst (d/q '[:find ?e :in $ ?ident :where [?e :authorization.role/id ?ident]] db child))]
-    (assert parent-id "Parent could not be found")
-    (assert child-id "Child could not be found")
-    (d/transact conn [[:db/retract parent-id :authorization.role/child child-id]])))
+  (d/transact conn [[:db/retract [:authorization.role/id parent]
+                     :authorization.role/child [:authorization.role/id child]]]))
 
 (defn delete
   "Deletes the given (childless) role from the database"
   [conn role]
   (let [db (d/db conn)
-        id (ffirst (d/q '[:find ?e :in $ ?ident :where [?e :authorization.role/id ?ident]] db role))
-        child-ids (map first (d/q '[:find ?e :in $ ?id :where [?id :authorization.role/child ?e]] db id))]
-    (assert id "Role not found")
-    (assert (not (seq child-ids)) (str "Child roles found " child-ids))
-    (d/transact conn [[:db.fn/retractEntity id]])))
+        cs (children db role)]
+    (assert (not (seq cs)) (str "Child roles found" cs))
+    (d/transact conn [[:db.fn/retractEntity [:authorization.role/id role]]])))

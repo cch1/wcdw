@@ -15,6 +15,11 @@
   (checker [actual]
            (extended-= (-> actual deref :tx-data vec) expected)))
 
+(defchecker refers-to-tx-exception
+  [expected]
+  (checker [actual]
+           (try (deref actual) false (catch Throwable e (extended-= (ex-data (.getCause e)) expected)))))
+
 (def uri "datomic:mem://0")
 
 (def fixtures
@@ -104,26 +109,43 @@
         db (-> (d/connect uri) d/db (d/with trx) :db-after)]
     (cyclic? db) => truthy))
 
+(fact "Can extract a role-graph"
+  (let [db (-> uri d/connect d/db)]
+    (role-graph db) => {:root {:u0 {:u00 {:u000 {} :u00x {}} :u00x {}} :u1 {}}})  )
+
 (fact "Can create a role"
   (let [conn (-> uri d/connect)]
     (create conn :root :u2) => (tx-data (n-of (partial instance? datomic.db.Datum) 3))
     (children (d/db conn) :root) => (contains #{:u2})
     (roles (d/db conn)) => (contains #{:root :u2})))
 
+(fact "Can't create a role without a valid parent"
+  (let [conn (-> uri d/connect)]
+    (create conn :inexistant-role :new-role)) => (refers-to-tx-exception {:db/error :db.error/not-an-entity}))
+
 (fact "Can assign a role to a parent"
   (let [conn (-> uri d/connect)]
     (assign conn :u0 :u1) => (tx-data (has every? (partial instance? datomic.db.Datum)))
     (children (d/db conn) :u0) => (contains #{:u1})))
 
-(fact "Can extract a role-graph"
-  (let [db (-> uri d/connect d/db)]
-    (role-graph db) => {:root {:u0 {:u00 {:u000 {} :u00x {}} :u00x {}} :u1 {}}})  )
+(fact "Can't assign a role to a parent unless both exist"
+  (let [conn (-> uri d/connect)]
+    (assign conn :inexistant0 :inexistant1) => (refers-to-tx-exception {:db/error :db.error/not-an-entity})
+    (assign conn :inexistant :u1) => (refers-to-tx-exception {:db/error :db.error/not-an-entity})
+    (assign conn :u0 :inexistant) => (refers-to-tx-exception {:db/error :db.error/not-an-entity})))
 
 (fact "Can unassign a child role from a parent"
   (let [conn (-> uri d/connect)]
     (unassign conn :u0 :u00) => (tx-data (has every? (partial instance? datomic.db.Datum)))
     ;; TODO: check that child has root as new parent
     (children (d/db conn) :u0) =not=> (contains #{:u00})))
+
+(fact "Can't unassign a role from a parent unless both exist"
+  (let [conn (-> uri d/connect)]
+;;    (unassign conn :u1 :u000) =future=> (throws Exception)
+    (unassign conn :inexistant0 :inexistant1) => (refers-to-tx-exception {:db/error :db.error/not-an-entity})
+    (unassign conn :inexistant :u1) => (refers-to-tx-exception {:db/error :db.error/not-an-entity})
+    (unassign conn :u0 :inexistant) => (refers-to-tx-exception {:db/error :db.error/not-an-entity})))
 
 (fact "Can delete a leaf role"
   (let [conn (-> uri d/connect)]
@@ -132,5 +154,9 @@
 
 (fact "Can't delete a role that would orphan children"
   (let [conn (-> uri d/connect)]
-    (delete conn :u00) => (throws Throwable)
+    (delete conn :u00) => (throws java.lang.AssertionError)
     (roles (d/db conn)) => (contains #{:u00})))
+
+(fact "Can't delete a role unless it exists"
+  (let [conn (-> uri d/connect)]
+    (delete conn :inexistant) => (refers-to-tx-exception (contains {:db/error anything}))))
