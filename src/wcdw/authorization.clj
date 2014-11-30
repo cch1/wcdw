@@ -3,7 +3,6 @@
   (:require [clojure.tools.logging :as log]
             [clojure.set :as set]
             [datomic.api :as d]
-            [wcdw.authorization.database :as rkdb]
             [wcdw.authorization.role :as role]
             [wcdw.authorization.permission :as permission]
             [ring.util.response :as response]))
@@ -17,7 +16,6 @@
 
 (def ^:private root :root)
 
-(rkdb/install-schema conn)
 (defn install-root-role
   [conn root]
   (d/transact conn [{:db/id #db/id[:db.part/roles]
