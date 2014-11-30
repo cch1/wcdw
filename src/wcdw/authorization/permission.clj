@@ -4,15 +4,13 @@
             [clojure.set :as set]
             [datomic.api :as d]))
 
+;; Issues to resolve
+;; 1. Should modes be idents or domain-modelled entities with db/unique set to db.unique/identity?
+
 (let [schema [{:db/id          #db/id[:db.part/db]
                :db/ident       :authorization.permission/role
                :db/valueType   :db.type/ref
                :db/cardinality :db.cardinality/one
-               :db.install/_attribute :db.part/db}
-              {:db/id          #db/id[:db.part/db]
-               :db/ident       :authorization.permission/mode
-               :db/valueType   :db.type/ref
-               :db/cardinality :db.cardinality/many
                :db.install/_attribute :db.part/db}
               {:db/id          #db/id[:db.part/db]
                :db/ident       :authorization.permission/resource
@@ -20,16 +18,9 @@
                :db/cardinality :db.cardinality/one
                :db.install/_attribute :db.part/db}
               {:db/id          #db/id[:db.part/db]
-               :db/ident       :authorization.resource/name
-               :db/valueType   :db.type/keyword
-               :db/unique      :db.unique/value
-               :db/cardinality :db.cardinality/one
-               :db.install/_attribute :db.part/db}
-              {:db/id          #db/id[:db.part/db]
-               :db/ident       :authorization.mode/name
-               :db/valueType   :db.type/keyword
-               :db/unique      :db.unique/value
-               :db/cardinality :db.cardinality/one
+               :db/ident       :authorization.permission/mode
+               :db/valueType   :db.type/ref
+               :db/cardinality :db.cardinality/many
                :db.install/_attribute :db.part/db}
               ;; Partition
               {:db/id #db/id[:db.part/db]
@@ -41,16 +32,17 @@
     [conn]
     (d/transact conn schema)))
 
-(defn create-resource [conn r]
-  (d/transact conn [{:db/id #db/id[:db.part/permissions -1] :authorization.resource/name r}]))
-
 (defn create-mode [conn m]
-  (d/transact conn [{:db/id #db/id[:db.part/permissions -1] :authorization.mode/name m}]))
+  (d/transact conn [{:db/id #db/id[:db.part/permissions] :db/ident m}]))
 
 (defn permissions
   "Return a seq of all defined permissions"
   [db]
-  (map first (d/q '[:find ?v :where [_ :authorization.permission/mode ?v]] db)))
+  (set (d/q '{:find [?role ?mode ?resource]
+              :where [[?e :authorization.permission/role ?role]
+                      [?e :authorization.permission/mode ?mode]
+                      [?e :authorization.permission/resource ?resource]]}
+            db)))
 
 (def rules
   '[])
@@ -58,32 +50,31 @@
 (defn grant
   "Grant to the given role permission to access the given resource in the given mode"
   [conn role mode resource]
-  (d/transact conn [{:db/id #db/id[:db.part/permissions -1]
-                     :authorization.permission/role {:db/id [:authorization.role/id role]}
-                     :authorization.permission/mode {:db/id [:authorization.mode/name mode]}
-                     :authorization.permission/resource {:db/id [:authorization.resource/name resource]}}]))
+  (d/transact conn [{:db/id #db/id[:db.part/permissions]
+                     :authorization.permission/mode mode
+                     :authorization.permission/role role
+                     :authorization.permission/resource resource}]))
 
 (defn revoke
   "Revoke from the given role permission to access the given resource in the given mode"
   [conn role mode resource]
-  )
+  (let [db (d/db conn)
+        permission (d/q '{:find [?e .]
+                          :in [$ ?role ?resource]
+                          :where [[?e :authorization.permission/role ?role]
+                                  [?e :authorization.permission/resource ?resource]]}
+                              db role resource)]
+    (d/transact conn [[:db/retract permission :authorization.permission/mode mode]])))
 
-(defn list-perms
-  "List permissions a role has for a given resource"
-  [db role resource]
-  (d/q '[:find ?p :in $ ?role ?resource :where
-         [?r :authorization.role/id ?role]
-         [?p :authorization.permission/role ?r]
-         [?re :authorization.resource/name ?resource]
-         [?p :authorization.permission/resource ?re]] db role resource))
-
-(defn unrooted?
-  "Does the graph contain roles not descendants of the root?"
-  [db]
-  (d/q '[:find ?unrooted :in $ % :where ]))
-
-(defn permissions [db]
-  (d/q '[:find ?e
-         :in $
-         :where [?e :authorization.permission/mode ?v]]
-       db))
+(defn permitted?
+  [db role mode resource]
+  (let [role (d/entid db role)
+        resource (d/entid db resource)
+        mode (d/entid db mode)]
+    (when (and role resource mode)
+      (d/q '{:find [?e .]
+                    :in [$ ?role ?mode ?resource]
+                    :where [[?e :authorization.permission/resource ?resource]
+                            [?e :authorization.permission/role ?role]
+                            [?e :authorization.permission/mode ?mode]]}
+                  db role mode resource))))
