@@ -16,87 +16,33 @@
 
 (def ^:private root :root)
 
-(defn install-root-role
-  [conn root]
-  (d/transact conn [{:db/id #db/id[:db.part/roles]
-                     :authorization.role/id root}]))
-
-(install-root-role conn root)
+(defn initialize!
+  "Iniitialize the database with schema, transaction functions & seed values"
+  [conn]
+  (role/initialize! conn)
+  (permission/initialize! conn))
 
 (defmacro with-role [role & body]
   `(binding [*role* ~role] (do ~@body)))
 
-;;;;;;;;;;;;; Roles
-
-(defn roles [db]
-  (map (fn [[id]] (d/entity db id))
-       (d/q '[:find ?e :where [?e :authorization.role/id ?v]] db)))
-
-(defn role-graph
-  [db]
-  (loop []))
-
-(defn create
-  [conn ident parent-ident]
-  {:pre [(keyword? ident) (keyword? parent-ident) (not= :root ident)]}
-  (let [db (d/db conn)
-        parent (first (d/q '[:find ?e :in $ ?ident :where [?e :authorization.role/id ?ident]] db parent-ident))]
-    (assert parent "Parent could not be found")
-    (d/transact conn [{:db/id #db/id[:db.part/roles]
-                       :authorization.role/id ident
-                       :authorization.role/parent parent}])))
-
-(defn assign
-  "(Re)assign the child role to the parent role"
-  [conn childk parentk]
-  (let [db (d/db conn)
-        parent-dbid (first (d/q '[:find ?e :where [?e :authorization.role/id _]] db parentk))]
-    (d/transact conn [{:db/id #db/id[:db.part/roles]
-                       :authorization.role/id childk
-                       :authorization.role/parent parent-dbid}])))
-
-(defn unassign
-  "Remove the child role from the parent role"
-  [parent child & children]
-  (swap! roles update-in [parent] (fn [roles] (apply disj (or roles #{}) child children))))
-
-(def ^:private descend
-  ;; Return all nodes encountered walking the tree, represented as a map of node->uubnodes, starting at k
-  (fn [tree node]
-    (let [children (set (mapcat #(descend tree %) (get tree node #{})))]
-      (conj children node))))
-
-;; Permissions
-(def permissions (atom {}))
-(defn permissions [db]
-  (d/q '[:find ?e
-         :in $
-         :where [?e :authorization.permission/mode ?v]]
-       db
-       ))
-
-(defn grant
-  "Grant to the given role permission to access the given resource in the given mode"
-  [role mode resource]
-  (swap! permissions update-in [resource mode] (fn [roles] (conj (or roles #{}) role))))
-
-(defn revoke
-  "Revoke from the given role permission to access the given resource in the given mode"
-  [role mode resource]
-  (swap! permissions update-in [resource mode] (fn [roles] (disj (or roles #{}) role))))
-
+;; Rules
+(def rules (let [top []]
+             (concat role/rules permission/rules top)))
 ;; API
 (defn authorized?
-  "Return boolean predicated on the given identity having permission to access the given resource in the given mode"
-  ([mode resource] (authorized? *role* mode resource))
-  ([role mode resource]
-     (let [permitted-roles (get-in @permissions [resource mode] #{})
-           role-family (descend @roles role)
-           authorized-role (first (set/intersection permitted-roles role-family))]
-       (if authorized-role
-         (log/debugf "Authorization ✓: %s -> %s [%s] via %s" role resource mode authorized-role)
-         (log/debugf "Authorization X: %s -> %s [%s]" role resource mode))
-       authorized-role)))
+  "Predicate on the role-like entity having permission to access the resource-like entity via the mode"
+  [db role mode resource]
+  (let [authorized-role (d/q '{:find [?descendant .]
+                               :in [$ % ?role ?mode ?resource]
+                               :where [(descendant+ ?role ?descendant)
+                                       [?e :authorization.permission/role ?descendant]
+                                       [?e :authorization.permission/resource ?resource]
+                                       [?e :authorization.permission/mode ?mode]]}
+                             db rules (:db/id role) (:db/id mode) (:db/id resource))]
+    (if authorized-role
+      (log/debugf "Authorization ✓: %s -> %s [%s] via %s" role resource mode authorized-role)
+      (log/debugf "Authorization X: %s -> %s [%s]" role resource mode))
+    authorized-role))
 
 (defn assert-authorized
   [& args]
