@@ -50,24 +50,28 @@
      [?permission :authorization.permission/resource ?resource]
      [?permission :authorization.permission/mode ?mode]]])
 
+(defn- permission
+  "Find the permission entity for role to access resource"
+  [db role resource]
+  (d/q '{:find [?e .]
+         :in [$ ?role ?resource]
+         :where [[?e :authorization.permission/role ?role]
+                 [?e :authorization.permission/resource ?resource]]}
+       db role resource))
+
 (defn grant
   "Grant to the given role permission to access the given resource in the given mode"
   [conn role mode resource]
-  (d/transact conn [{:db/id #db/id[:db.part/permissions]
-                     :authorization.permission/mode mode
-                     :authorization.permission/role role
-                     :authorization.permission/resource resource}]))
+  (let [db (d/db conn)
+        p (or (permission db role resource) (d/tempid :db.part/permissions))]
+    (d/transact conn [[:db/add p :authorization.permission/mode mode]])))
 
 (defn revoke
   "Revoke from the given role permission to access the given resource in the given mode"
   [conn role mode resource]
   (let [db (d/db conn)
-        permission (d/q '{:find [?e .]
-                          :in [$ ?role ?resource]
-                          :where [[?e :authorization.permission/role ?role]
-                                  [?e :authorization.permission/resource ?resource]]}
-                              db role resource)]
-    (d/transact conn [[:db/retract permission :authorization.permission/mode mode]])))
+        p (permission db role resource)]
+    (when p (d/transact conn [[:db/retract p :authorization.permission/mode mode]]))))
 
 (defn permitted?
   [db role mode resource]

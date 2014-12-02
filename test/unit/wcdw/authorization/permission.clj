@@ -99,7 +99,7 @@
   (let [conn (-> uri d/connect)
         role [:authorization.role/id :role]
         resource [:authorization.resource/id :resource]]
-    (grant conn role :read resource) => (tx-data (n-of (partial instance? datomic.db.Datum) 4))))
+    (grant conn role :delete resource) => (tx-data (n-of (partial instance? datomic.db.Datum) 2))))
 
 (fact "Can revoke role's permission to access resource via mode"
   (let [conn (-> uri d/connect)
