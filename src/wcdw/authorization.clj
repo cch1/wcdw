@@ -26,18 +26,17 @@
   `(binding [*role* ~role] (do ~@body)))
 
 ;; Rules
-(def rules (let [top []]
+(def rules (let [top '[[(authorized? ?role ?mode ?resource ?descendant)
+                        (descendant+ ?role ?descendant)
+                        (permitted? ?descendant ?resource ?mode _)]]]
              (concat role/rules permission/rules top)))
 ;; API
 (defn authorized?
   "Predicate on the role-like entity having permission to access the resource-like entity via the mode"
   [db role mode resource]
-  (let [authorized-role (d/q '{:find [?descendant .]
+  (let [authorized-role (d/q '{:find [?authorized-role .]
                                :in [$ % ?role ?mode ?resource]
-                               :where [(descendant+ ?role ?descendant)
-                                       [?e :authorization.permission/role ?descendant]
-                                       [?e :authorization.permission/resource ?resource]
-                                       [?e :authorization.permission/mode ?mode]]}
+                               :where [(authorized? ?role ?mode ?resource ?authorized-role)]}
                              db rules (:db/id role) (:db/id mode) (:db/id resource))]
     (if authorized-role
       (log/debugf "Authorization ✓: %s -> %s [%s] via %s" role resource mode authorized-role)

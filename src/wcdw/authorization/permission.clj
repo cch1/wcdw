@@ -45,7 +45,10 @@
             db)))
 
 (def rules
-  '[])
+  '[[(permitted? ?role ?resource ?mode ?permission)
+     [?permission :authorization.permission/role ?role]
+     [?permission :authorization.permission/resource ?resource]
+     [?permission :authorization.permission/mode ?mode]]])
 
 (defn grant
   "Grant to the given role permission to access the given resource in the given mode"
@@ -73,8 +76,6 @@
         mode (d/entid db mode)]
     (when (and role resource mode)
       (d/q '{:find [?e .]
-                    :in [$ ?role ?mode ?resource]
-                    :where [[?e :authorization.permission/resource ?resource]
-                            [?e :authorization.permission/role ?role]
-                            [?e :authorization.permission/mode ?mode]]}
-                  db role mode resource))))
+                    :in [$ % ?role ?mode ?resource]
+                    :where [(permitted? ?role ?resource ?mode ?e)]}
+                  db rules role mode resource))))
