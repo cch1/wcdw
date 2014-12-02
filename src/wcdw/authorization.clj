@@ -1,20 +1,12 @@
 (ns wcdw.authorization
   "A simple Role-Based Access Control System"
   (:require [clojure.tools.logging :as log]
-            [clojure.set :as set]
             [datomic.api :as d]
             [wcdw.authorization.role :as role]
             [wcdw.authorization.permission :as permission]
             [ring.util.response :as response]))
 
 (def ^:dynamic *role*)
-
-(def conn (let [uri "datomic:mem://0"]
-            (d/delete-database uri)
-            (d/create-database uri)
-            (d/connect uri)))
-
-(def ^:private root :root)
 
 (defn initialize!
   "Iniitialize the database with schema, transaction functions & seed values"
