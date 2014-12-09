@@ -1,4 +1,4 @@
-(defproject com.roomkey/loyalty "0.1.0-SNAPSHOT"
+(defproject cch1/wcdw "0.1.0-SNAPSHOT"
   :description "Library for Role-Based Access Control"
   :url "https://github.com/cch1/wcdw"
   :license {:name "Distributed under the Eclipse Public License either version 1.0 or (at your option) any later version"
