@@ -17,6 +17,7 @@
   :profiles {:dev {:resource-paths ["dev-resources"]
                    :source-paths ["util"]
                    :dependencies [[midje "1.6.3"]
+                                  [io.rkn/conformity "0.3.2"]
                                   [org.slf4j/slf4j-api "1.7.7"]
                                   [org.slf4j/jcl-over-slf4j "1.7.7"]
                                   [org.slf4j/slf4j-log4j12 "1.7.7"]

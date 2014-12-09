@@ -7,30 +7,25 @@
 ;; Issues to resolve
 ;; 1. Should modes be idents or domain-modelled entities with db/unique set to db.unique/identity?
 
-(let [schema [{:db/id          #db/id[:db.part/db]
-               :db/ident       :authorization.permission/role
-               :db/valueType   :db.type/ref
-               :db/cardinality :db.cardinality/one
-               :db.install/_attribute :db.part/db}
-              {:db/id          #db/id[:db.part/db]
-               :db/ident       :authorization.permission/resource
-               :db/valueType   :db.type/ref
-               :db/cardinality :db.cardinality/one
-               :db.install/_attribute :db.part/db}
-              {:db/id          #db/id[:db.part/db]
-               :db/ident       :authorization.permission/mode
-               :db/valueType   :db.type/ref
-               :db/cardinality :db.cardinality/many
-               :db.install/_attribute :db.part/db}
-              ;; Partition
-              {:db/id #db/id[:db.part/db]
-               :db/ident :db.part/permissions
-               :db.install/_partition :db.part/db}
-              ]]
-  (defn initialize!
-    "Install schema and load seed data"
-    [conn]
-    (d/transact conn schema)))
+(def schema [{:db/id          #db/id[:db.part/db]
+              :db/ident       :authorization.permission/role
+              :db/valueType   :db.type/ref
+              :db/cardinality :db.cardinality/one
+              :db.install/_attribute :db.part/db}
+             {:db/id          #db/id[:db.part/db]
+              :db/ident       :authorization.permission/resource
+              :db/valueType   :db.type/ref
+              :db/cardinality :db.cardinality/one
+              :db.install/_attribute :db.part/db}
+             {:db/id          #db/id[:db.part/db]
+              :db/ident       :authorization.permission/mode
+              :db/valueType   :db.type/ref
+              :db/cardinality :db.cardinality/many
+              :db.install/_attribute :db.part/db}
+             ;; Partition
+             {:db/id #db/id[:db.part/db]
+              :db/ident :db.part/permissions
+              :db.install/_partition :db.part/db}])
 
 (defn create-mode [conn m]
   (d/transact conn [{:db/id #db/id[:db.part/permissions] :db/ident m}]))
@@ -80,6 +75,6 @@
         mode (d/entid db mode)]
     (when (and role resource mode)
       (d/q '{:find [?e .]
-                    :in [$ % ?role ?mode ?resource]
-                    :where [(permitted? ?role ?resource ?mode ?e)]}
-                  db rules role mode resource))))
+             :in [$ % ?role ?mode ?resource]
+             :where [(permitted? ?role ?resource ?mode ?e)]}
+           db rules role mode resource))))

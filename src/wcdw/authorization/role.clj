@@ -4,25 +4,21 @@
   (:require [clojure.tools.logging :as log]
             [datomic.api :as d]))
 
-(let [schema [{:db/id          #db/id[:db.part/db]
-               :db/ident       :authorization.role/id
-               :db/valueType   :db.type/keyword
-               :db/cardinality :db.cardinality/one
-               :db/unique      :db.unique/identity
-               :db.install/_attribute :db.part/db}
-              {:db/id          #db/id[:db.part/db]
-               :db/ident       :authorization.role/children
-               :db/valueType   :db.type/ref
-               :db/cardinality :db.cardinality/many
-               :db.install/_attribute :db.part/db}
-              ;; Partition
-              {:db/id #db/id[:db.part/db]
-               :db/ident :db.part/roles
-               :db.install/_partition :db.part/db}]]
-  (defn initialize!
-    "Install schema and load seed data"
-    [conn]
-    (d/transact conn schema)))
+(def schema [{:db/id          #db/id[:db.part/db]
+              :db/ident       :authorization.role/id
+              :db/valueType   :db.type/keyword
+              :db/cardinality :db.cardinality/one
+              :db/unique      :db.unique/identity
+              :db.install/_attribute :db.part/db}
+             {:db/id          #db/id[:db.part/db]
+              :db/ident       :authorization.role/children
+              :db/valueType   :db.type/ref
+              :db/cardinality :db.cardinality/many
+              :db.install/_attribute :db.part/db}
+             ;; Partition
+             {:db/id #db/id[:db.part/db]
+              :db/ident :db.part/roles
+              :db.install/_partition :db.part/db}])
 
 (defn roles
   "Return a seq of all defined roles"

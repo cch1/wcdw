@@ -8,11 +8,12 @@
 
 (def ^:dynamic *role*)
 
-(defn initialize!
-  "Iniitialize the database with schema, transaction functions & seed values"
-  [conn]
-  (role/initialize! conn)
-  (permission/initialize! conn))
+(def schema
+  "Embellished transaction data representing the schema of wcdw.  Compatible with rkneufeld/conformity"
+  {::authorization {:requires [::roles ::permissions]
+                    :txes []}
+   ::roles {:txes [role/schema]}
+   ::permissions {:txes [permission/schema]}})
 
 (defmacro with-role [role & body]
   `(binding [*role* ~role] (do ~@body)))

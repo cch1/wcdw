@@ -6,6 +6,19 @@
             [midje.sweet :refer :all]
             [midje.checking.core :refer [extended-=]]))
 
+(def uri "datomic:mem://0")
+
+(def ^:dynamic *conn*)
+
+(namespace-state-changes [(around :facts (do (d/delete-database uri)
+                                             (d/create-database uri)
+                                             (binding [*conn* (d/connect uri)]
+                                               ?form)))])
+
+(fact "Has reasonable schema"
+  (:tx-data (d/with (d/db *conn*) schema)) => (has every? (partial instance? datomic.Datom)))
+
+;; The following tests interact with the database and expect fixture data to be installed afresh before each test
 ;; FIXME: Datomic transaction return map-like associations whose values are *not* suitable for the eager
 ;; evaluation that midje applies to the LHS of facts.  Reference: https://github.com/marick/Midje/issues/269
 
@@ -18,8 +31,6 @@
   [expected]
   (checker [actual]
            (try (deref actual) false (catch Throwable e (extended-= (ex-data (.getCause e)) expected)))))
-
-(def uri "datomic:mem://0")
 
 (def role-schema
   [{:db/id          #db/id[:db.part/db]
@@ -71,44 +82,29 @@
 
 (namespace-state-changes [(around :facts (do (d/delete-database uri)
                                              (d/create-database uri)
-                                             ?form
-                                             (d/delete-database uri)))])
-
-(fact "Can initialize"
-  (let [conn (d/connect uri)]
-    (:tx-data @(initialize! conn))) => truthy)
-
-;; The following tests interact with the database and expect fixture data to be installed afresh before each test
-
-(namespace-state-changes [(around :facts (do (d/delete-database uri)
-                                             (d/create-database uri)
-                                             (let [conn (d/connect uri)]
-                                               (initialize! conn)
-                                               (install-fixtures conn fixtures))
-                                             ?form))])
+                                             (binding [*conn* (d/connect uri)]
+                                               (install-fixtures *conn* (concat [schema] fixtures))
+                                               ?form)))])
 
 (fact "Can create mode"
-  (let [conn (-> uri d/connect)]
-    (create-mode conn :nuke) => (tx-data (n-of (partial instance? datomic.db.Datum) 2))))
+  (create-mode *conn* :nuke) => (tx-data (n-of (partial instance? datomic.db.Datum) 2)))
 
 (fact "Can retrieve all permissions"
-  (let [db (-> uri d/connect d/db)]
+  (let [db (d/db *conn*)]
     (permissions db) => (just #{(just [integer? integer? integer?])})))
 
 (fact "Can grant role permission to access resource via mode"
-  (let [conn (-> uri d/connect)
-        role [:authorization.role/id :role]
+  (let [role [:authorization.role/id :role]
         resource [:authorization.resource/id :resource]]
-    (grant conn role :delete resource) => (tx-data (n-of (partial instance? datomic.db.Datum) 2))))
+    (grant *conn* role :delete resource) => (tx-data (n-of (partial instance? datomic.db.Datum) 2))))
 
 (fact "Can revoke role's permission to access resource via mode"
-  (let [conn (-> uri d/connect)
-        role [:authorization.role/id :role]
+  (let [role [:authorization.role/id :role]
         resource [:authorization.resource/id :resource]]
-    (revoke conn role :read resource) => (tx-data (n-of (partial instance? datomic.db.Datum) 2))))
+    (revoke *conn* role :read resource) => (tx-data (n-of (partial instance? datomic.db.Datum) 2))))
 
 (fact "Can determine if role is permitted to access resource via mode"
-  (let [db (-> uri d/connect d/db)
+  (let [db (d/db *conn*)
         resource [:authorization.resource/id :resource]]
     (permitted? db [:authorization.role/id :role] :read resource) => truthy
     (permitted? db [:authorization.role/id :role] :delete resource) => falsey
