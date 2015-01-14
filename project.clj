@@ -22,4 +22,10 @@
                                   [org.slf4j/jcl-over-slf4j "1.7.7"]
                                   [org.slf4j/slf4j-log4j12 "1.7.7"]
                                   [log4j/log4j "1.2.17"]]}}
-  :reload-paths ["src"])
+  :reload-paths ["src"]
+  :scm {:url "git@github.com:cch1/wcdw.git"}
+  :pom-addition [:developers [:developer
+                              [:name "Chris Hapgood"]
+                              [:url "http://hapgoods.com"]
+                              [:email "cch1@hapgoods.com"]
+                              [:timezone "-5"]]])
