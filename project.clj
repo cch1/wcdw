@@ -6,7 +6,7 @@
             :comments "All rights reserved"}
   :plugins []
   :dependencies [[org.clojure/clojure "1.6.0"]
-                 [com.datomic/datomic-free "0.9.5078" :exclusions [org.slf4j/slf4j-nop
+                 [com.datomic/datomic-free "0.9.5153" :exclusions [org.slf4j/slf4j-nop
                                                                    org.slf4j/log4j-over-slf4j
                                                                    joda-time
                                                                    commons-codec]]
@@ -17,10 +17,10 @@
   :profiles {:dev {:resource-paths ["dev-resources"]
                    :source-paths ["util"]
                    :dependencies [[midje "1.6.3"]
-                                  [io.rkn/conformity "0.3.2"]
-                                  [org.slf4j/slf4j-api "1.7.7"]
-                                  [org.slf4j/jcl-over-slf4j "1.7.7"]
-                                  [org.slf4j/slf4j-log4j12 "1.7.7"]
+                                  [io.rkn/conformity "0.3.4"]
+                                  [org.slf4j/slf4j-api "1.7.12"]
+                                  [org.slf4j/jcl-over-slf4j "1.7.12"]
+                                  [org.slf4j/slf4j-log4j12 "1.7.12"]
                                   [log4j/log4j "1.2.17"]]}}
   :reload-paths ["src"]
   :scm {:url "git@github.com:cch1/wcdw.git"}
