@@ -11,7 +11,7 @@
 (def schema
   "Embellished transaction data representing the schema of wcdw.  Compatible with rkneufeld/conformity"
   {::authorization {:requires [::roles ::permissions]
-                    :txes []}
+                    :txes [[]]}
    ::roles {:txes [role/schema]}
    ::permissions {:txes [permission/schema]}})
 
