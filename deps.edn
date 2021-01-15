@@ -1,0 +1,19 @@
+{:deps {org.clojure/clojure {:mvn/version "1.10.1"}
+        com.datomic/datomic-free {:mvn/version "0.9.5697"
+                                  :exclusions [org.slf4j/slf4j-nop org.slf4j/log4j-over-slf4j]}
+        org.clojure/tools.logging {:mvn/version "1.1.0"}
+        ring/ring-core {:mvn/version "1.8.2"}}
+ :paths ["src"]
+ :aliases {:dev {:extra-paths ["dev-resources"]
+                 :jvm-args ["-Djava.io.tmpdir=./tmp"]
+                 :extra-deps {org.slf4j/slf4j-api {:mvn/version "1.7.30"}
+                              org.slf4j/jcl-over-slf4j {:mvn/version "1.7.30"}
+                              org.slf4j/slf4j-log4j12 {:mvn/version "1.7.30"}
+                              log4j/log4j {:mvn/version "1.2.17"}}}
+           :test {:extra-paths ["test"]
+                  :extra-deps {midje/midje {:mvn/version "1.9.9"}
+                               io.rkn/conformity {:mvn/version "0.5.4"}}}
+           ;; $ clojure -M:test:project/test-clj
+           :project/test-clj {:extra-deps {midje-runner/midje-runner {:git/url "https://github.com/miorimmax/midje-runner"
+                                                                      :sha "ee9c2813e150ae6b3ea41b446b09ba40fc89bdc1"}}
+                              :main-opts ["-m" "midje-runner.runner"]}}}
