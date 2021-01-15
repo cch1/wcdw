@@ -155,4 +155,4 @@
       (roles (d/db *conn*)) => (contains #{:u00}))
 
 (fact "Can't delete a role unless it exists"
-      (delete *conn* :inexistant) => (refers-to-tx-exception (contains {:db/error anything})))
+      (delete *conn* :inexistant) => (tx-data (one-of (partial instance? datomic.db.Datum))))
