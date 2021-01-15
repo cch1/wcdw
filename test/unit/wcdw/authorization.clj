@@ -82,7 +82,7 @@
             {:db/id #db/id[:db.part/permissions]
              :db/ident :delete}]]}
    ::permission-fixtures
-   {:requires [::role-fixtures ::resource-fixtures ::mode-fixtures]
+   {:requires [:wcdw.authorization/permissions ::role-fixtures ::resource-fixtures ::mode-fixtures]
     :txes [[{:db/id #db/id[:db.part/permissions]
              :authorization.permission/role [:authorization.role/id :role00]
              :authorization.permission/resource [:authorization.resource/id :resource0]
