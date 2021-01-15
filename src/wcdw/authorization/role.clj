@@ -17,7 +17,7 @@
               :db.install/_attribute :db.part/db}
              ;; Partition
              {:db/id #db/id[:db.part/db]
-              :db/ident :db.part/roles
+              :db/ident :wcdw/roles
               :db.install/_partition :db.part/db}])
 
 (defn roles
@@ -121,7 +121,7 @@
   [conn ident & [parent-ident]]
   {:pre [(keyword? ident) (or (nil? parent-ident) (keyword? parent-ident))]}
   (let [db (d/db conn)
-        trx {:db/id #db/id[:db.part/roles -1]
+        trx {:db/id #db/id[:wcdw/roles -1]
              :authorization.role/id ident}
         trx (if parent-ident (assoc trx :authorization.role/_children [:authorization.role/id parent-ident]) trx)]
     (d/transact conn [trx])))

@@ -16,7 +16,7 @@
                                                ?form)))])
 
 (fact "Has reasonable schema"
-  (:tx-data (d/with (d/db *conn*) schema)) => (has every? (partial instance? datomic.Datom)))
+      (:tx-data (d/with (d/db *conn*) schema)) => (has every? (partial instance? datomic.Datom)))
 
 ;; The following tests interact with the database and expect fixture data to be installed afresh before each test
 ;; FIXME: Datomic transaction return map-like associations whose values are *not* suitable for the eager
@@ -40,7 +40,7 @@
     :db/cardinality :db.cardinality/one
     :db.install/_attribute :db.part/db}
    {:db/id #db/id[:db.part/db]
-    :db/ident :db.part/roles
+    :db/ident :wcdw/roles
     :db.install/_partition :db.part/db}])
 
 (def resource-schema
@@ -55,24 +55,22 @@
     :db.install/_partition :db.part/db}])
 
 (def mode-fixtures
-  [{:db/id #db/id[:db.part/permissions]
-    :db/ident :read}
-   {:db/id #db/id[:db.part/permissions]
-    :db/ident :delete}])
+  [{:db/ident :read}
+   {:db/ident :delete}])
 
 (def permission-fixtures
-     [{:db/id #db/id[:db.part/roles -100]
-       :authorization.role/id :role}
-      {:db/id #db/id[:db.part/roles -101]
-       :authorization.role/id :role1}
-      {:db/id #db/id[:db.part/resources -200]
-       :authorization.resource/id :resource}
-      {:db/id #db/id[:db.part/resources -201]
-       :authorization.resource/id :resource1}
-      {:db/id #db/id[:db.part/permissions]
-       :authorization.permission/role #db/id[:db.part/roles -100]
-       :authorization.permission/resource #db/id[:db.part/resources -200]
-       :authorization.permission/mode :read}])
+  [{:db/id #db/id[:wcdw/roles -100]
+    :authorization.role/id :role}
+   {:db/id #db/id[:wcdw/roles -101]
+    :authorization.role/id :role1}
+   {:db/id #db/id[:db.part/resources -200]
+    :authorization.resource/id :resource}
+   {:db/id #db/id[:db.part/resources -201]
+    :authorization.resource/id :resource1}
+   {:db/id #db/id[:wcdw/permissions]
+    :authorization.permission/role #db/id[:wcdw/roles -100]
+    :authorization.permission/resource #db/id[:db.part/resources -200]
+    :authorization.permission/mode :read}])
 
 (def fixtures [role-schema resource-schema mode-fixtures permission-fixtures])
 
@@ -87,26 +85,26 @@
                                                ?form)))])
 
 (fact "Can create mode"
-  (create-mode *conn* :nuke) => (tx-data (n-of (partial instance? datomic.db.Datum) 2)))
+      (create-mode *conn* :nuke) => (tx-data (n-of (partial instance? datomic.db.Datum) 2)))
 
 (fact "Can retrieve all permissions"
-  (let [db (d/db *conn*)]
-    (permissions db) => (just #{(just [integer? integer? integer?])})))
+      (let [db (d/db *conn*)]
+        (permissions db) => (just #{(just [integer? integer? integer?])})))
 
 (fact "Can grant role permission to access resource via mode"
-  (let [role [:authorization.role/id :role]
-        resource [:authorization.resource/id :resource]]
-    (grant *conn* role :delete resource) => (tx-data (n-of (partial instance? datomic.db.Datum) 2))))
+      (let [role [:authorization.role/id :role]
+            resource [:authorization.resource/id :resource]]
+        (grant *conn* role :delete resource) => (tx-data (n-of (partial instance? datomic.db.Datum) 2))))
 
 (fact "Can revoke role's permission to access resource via mode"
-  (let [role [:authorization.role/id :role]
-        resource [:authorization.resource/id :resource]]
-    (revoke *conn* role :read resource) => (tx-data (n-of (partial instance? datomic.db.Datum) 2))))
+      (let [role [:authorization.role/id :role]
+            resource [:authorization.resource/id :resource]]
+        (revoke *conn* role :read resource) => (tx-data (n-of (partial instance? datomic.db.Datum) 2))))
 
 (fact "Can determine if role is permitted to access resource via mode"
-  (let [db (d/db *conn*)
-        resource [:authorization.resource/id :resource]]
-    (permitted? db [:authorization.role/id :role] :read resource) => truthy
-    (permitted? db [:authorization.role/id :role] :delete resource) => falsey
-    (permitted? db [:authorization.role/id :role] :nuke resource) => falsey
-    (permitted? db [:authorization.role/id :role1] :read resource)) => falsey)
+      (let [db (d/db *conn*)
+            resource [:authorization.resource/id :resource]]
+        (permitted? db [:authorization.role/id :role] :read resource) => truthy
+        (permitted? db [:authorization.role/id :role] :delete resource) => falsey
+        (permitted? db [:authorization.role/id :role] :nuke resource) => falsey
+        (permitted? db [:authorization.role/id :role1] :read resource)) => falsey)

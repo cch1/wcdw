@@ -24,11 +24,11 @@
               :db.install/_attribute :db.part/db}
              ;; Partition
              {:db/id #db/id[:db.part/db]
-              :db/ident :db.part/permissions
+              :db/ident :wcdw/permissions
               :db.install/_partition :db.part/db}])
 
 (defn create-mode [conn m]
-  (d/transact conn [{:db/id #db/id[:db.part/permissions] :db/ident m}]))
+  (d/transact conn [{:db/id #db/id[:wcdw/permissions] :db/ident m}]))
 
 (defn permissions
   "Return a seq of all defined permissions"
@@ -58,7 +58,7 @@
   "Grant to the given role permission to access the given resource in the given mode"
   [conn role mode resource]
   (let [db (d/db conn)
-        p (or (permission db role resource) (d/tempid :db.part/permissions))]
+        p (or (permission db role resource) (d/tempid :wcdw/permissions))]
     (d/transact conn [[:db/add p :authorization.permission/mode mode]])))
 
 (defn revoke

@@ -34,28 +34,28 @@
            (try (deref actual) false (catch Throwable e (extended-= (ex-data (.getCause e)) expected)))))
 
 (def fixtures
-  [[{:db/id #db/id[:db.part/roles -1000]
+  [[{:db/id #db/id[:wcdw/roles -1000]
      :authorization.role/id :root}
-    {:db/id #db/id[:db.part/roles -1]
+    {:db/id #db/id[:wcdw/roles -1]
      :authorization.role/id :u0
-     :authorization.role/_children #db/id[:db.part/roles -1000]}
-    {:db/id #db/id[:db.part/roles -2]
+     :authorization.role/_children #db/id[:wcdw/roles -1000]}
+    {:db/id #db/id[:wcdw/roles -2]
      :authorization.role/id :u1
-     :authorization.role/_children #db/id[:db.part/roles -1000]}
-    {:db/id #db/id[:db.part/roles -3]
+     :authorization.role/_children #db/id[:wcdw/roles -1000]}
+    {:db/id #db/id[:wcdw/roles -3]
      :authorization.role/id :u00
-     :authorization.role/_children #db/id[:db.part/roles -1]
+     :authorization.role/_children #db/id[:wcdw/roles -1]
      :db/doc "Child of u0"}
-    {:db/id #db/id[:db.part/roles -4]
+    {:db/id #db/id[:wcdw/roles -4]
      :authorization.role/id :u000
-     :authorization.role/_children #db/id[:db.part/roles -3]
+     :authorization.role/_children #db/id[:wcdw/roles -3]
      :db/doc "Grandchild of u0, child of u00"}
-    {:db/id #db/id[:db.part/roles -5]
+    {:db/id #db/id[:wcdw/roles -5]
      :authorization.role/id :u00x
-     :authorization.role/_children #db/id[:db.part/roles -3]
+     :authorization.role/_children #db/id[:wcdw/roles -3]
      :db/doc "Child of u00 and u0"}
     ;; Wire up second parent of :u00x -not possible with map representation above due to duplicate keys
-    [:db/add #db/id[:db.part/roles -1] :authorization.role/children #db/id[:db.part/roles -5]]]])
+    [:db/add #db/id[:wcdw/roles -1] :authorization.role/children #db/id[:wcdw/roles -5]]]])
 
 (defn install-fixtures [conn txs]
   (doseq [tx txs]
@@ -98,8 +98,8 @@
 (fact "cycles are detected"
       (let [db (d/db *conn*)]
         (cyclic? db) => falsey)
-      (let [ida (d/tempid :db.part/roles)
-            idb (d/tempid :db.part/roles)
+      (let [ida (d/tempid :wcdw/roles)
+            idb (d/tempid :wcdw/roles)
             trx [{:db/id ida
                   :authorization.role/id :ua
                   :authorization.role/_children idb}
