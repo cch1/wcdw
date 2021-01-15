@@ -78,7 +78,7 @@
 
 (defn install-fixtures [conn txs]
   (doseq [tx txs]
-    (d/transact conn tx)))
+    @(d/transact conn tx)))
 
 (namespace-state-changes [(around :facts (do (d/delete-database uri)
                                              (d/create-database uri)
