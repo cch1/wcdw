@@ -124,16 +124,16 @@
       (roles (d/db *conn*)) => (contains #{:root}))
 
 (fact "Can't create a role with an invalid parent"
-      (create *conn* :inexistant-role :new-role) => (refers-to-tx-exception {:db/error :db.error/not-an-entity}))
+      (create *conn* :inexistant-role :new-role) => (refers-to-tx-exception (contains {:db/error :db.error/not-an-entity})))
 
 (fact "Can assign a role to a parent"
       (assign *conn* :u0 :u1) => (tx-data (has every? (partial instance? datomic.db.Datum)))
       (children (d/db *conn*) :u0) => (contains #{:u1}))
 
 (fact "Can't assign a role to a parent unless both exist"
-      (assign *conn* :inexistant0 :inexistant1) => (refers-to-tx-exception {:db/error :db.error/not-an-entity})
-      (assign *conn* :inexistant :u1) => (refers-to-tx-exception {:db/error :db.error/not-an-entity})
-      (assign *conn* :u0 :inexistant) => (refers-to-tx-exception {:db/error :db.error/not-an-entity}))
+      (assign *conn* :inexistant0 :inexistant1) => (refers-to-tx-exception (contains {:db/error :db.error/not-an-entity}))
+      (assign *conn* :inexistant :u1) => (refers-to-tx-exception (contains {:db/error :db.error/not-an-entity}))
+      (assign *conn* :u0 :inexistant) => (refers-to-tx-exception (contains {:db/error :db.error/not-an-entity})))
 
 (fact "Can unassign a child role from a parent"
       (unassign *conn* :u0 :u00) => (tx-data (has every? (partial instance? datomic.db.Datum)))
@@ -142,9 +142,9 @@
 
 (fact "Can't unassign a role from a parent unless both exist"
       ;; (unassign *conn* :u1 :u000) =future=> (throws Exception)
-      (unassign *conn* :inexistant0 :inexistant1) => (refers-to-tx-exception {:db/error :db.error/not-an-entity})
-      (unassign *conn* :inexistant :u1) => (refers-to-tx-exception {:db/error :db.error/not-an-entity})
-      (unassign *conn* :u0 :inexistant) => (refers-to-tx-exception {:db/error :db.error/not-an-entity}))
+      (unassign *conn* :inexistant0 :inexistant1) => (refers-to-tx-exception (contains {:db/error :db.error/not-an-entity}))
+      (unassign *conn* :inexistant :u1) => (refers-to-tx-exception (contains {:db/error :db.error/not-an-entity}))
+      (unassign *conn* :u0 :inexistant) => (refers-to-tx-exception (contains {:db/error :db.error/not-an-entity})))
 
 (fact "Can delete a leaf role"
       (delete *conn* :u000) => (tx-data (has every? (partial instance? datomic.db.Datum)))
